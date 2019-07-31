@@ -1,0 +1,36 @@
+#!/bin/python
+
+########################################################################
+#                                                                      #
+# DISCLAIMER: This script encapsulates the project KITCAT and prepares #
+#             the catalogs. User can use KITCAT as well                #
+#                                                                      #
+########################################################################
+
+import sys
+
+import os
+
+import argparse
+
+import numpy
+
+def run(config, num_slices, prefix):
+    for islice in range(num_slices):
+        os.system("KITCAT_preprocess -c {} -p {}_slice{} -i {} -n {}".format(config, prefix, islice, islice, num_slices))
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description=r'Script to pre-process the catalogs for 2-point correlation function calculations. ' \
+                                     'DISCLAIMER: This script encapsulates the project KITCAT and prepares the catalogs. User can use KITCAT as well.')
+    parser.add_argument('-p', '--prefix', required=True, type=str, help='prefix to use for the output of the preprocessing.')
+    parser.add_argument('-n', '--number_of_slices', required=True, type=int, help='number of z-slices for the 2-point correlation function calculations.')
+    parser.add_argument('-c', '--config', required=True, type=str, help='configuration file in which the RA, Dec and z limits are defined as well as the galaxy' \
+                        ' and random catalog files')
+
+    parsed_args = parser.parse_args()
+    prefix      = parsed_args.prefix
+    num_slices  = parsed_args.number_of_slices
+    config      = parsed_args.config
+    
+    run(config, num_slices, prefix)

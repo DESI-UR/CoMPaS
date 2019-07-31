@@ -1,0 +1,66 @@
+#!/bin/python
+
+########################################################################
+#                                                                      #
+# DISCLAIMER: This script encapsulates the project KITCAT and          #
+#             generates the histograms to calculate 2-point            #
+#             correlation function for the provided catalog.           #
+#             User can use KITCAT as well.                             #
+#                                                                      #
+########################################################################
+
+import sys
+
+import os
+
+import argparse
+
+import configparser
+
+import numpy
+
+def run(num_jobs, prefix, config):
+
+    slurm_config = configparser.RawConfigParser()
+    slurm_config.read(config)
+    
+    user     = slurm_config.get('config', 'user')
+    partition= slurm_config.get('config', 'partition')
+    walltime = slurm_config.get('config', 'walltime')
+    mem      = slurm_config.get('config', 'memory')
+    envcmd   = slurm_config.get('config', 'environment_command')
+    # there will be try statements here
+    jobname  = slurm_config.get('config', 'jobname')
+    logfile  = slurm_config.get('config', 'logfile')
+    errfile  = slurm_config.get('config', 'errorfile')
+
+    for ijob in range(num_jobs):
+        cmd = "{}; srun ".format(envcmd) + \
+            "--export=ALL " + \
+            "--mem={} ".format(mem) + \
+            "--time={} ".format(walltime) + \
+            "--job-name={} ".format(jobname) + \
+            "--error={} ".format(errfile) + \
+            "--output={} ".format(logfile) + \
+            "--partition={} ".format(partition) + \
+            "KITCAT_combinatorial -p {}".format(prefix) + \
+            "-i {} ".format(ijob) + \
+            "-n {} ".format(num_jobs) + \
+            "-p {}".format(prefix)
+        print(cmd)
+        #os.system(cmd)
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description=r'Script to run the combinatorial stage of KITCAT for 2-point correlation function calculations. ' \
+                                     'DISCLAIMER: This script encapsulates the project KITCAT and prepares the catalogs. User can use KITCAT as well.')
+    parser.add_argument('-p', '--prefix', required=True, type=str, help='prefix to be used to read the preprocessed file and also to generate the output')
+    parser.add_argument('-n', '--number_of_jobs', required=True, type=int, help='number of jobs to be submitted to slurm')
+    parser.add_argument('-c', '--config', required=True, type=str, help='configuration file for the slurm jobs.')
+    
+    parsed_args = parser.parse_args()
+    prefix      = parsed_args.prefix
+    num_jobs    = parsed_args.number_of_jobs
+    config      = parsed_args.config
+    
+    run(num_jobs, prefix, config)
