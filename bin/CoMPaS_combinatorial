@@ -19,7 +19,7 @@ import configparser
 
 import numpy
 
-def run(num_jobs, prefix, config):
+def run(num_jobs, prefix, config, tempdir):
 
     slurm_config = configparser.RawConfigParser()
     slurm_config.read(config)
@@ -30,25 +30,46 @@ def run(num_jobs, prefix, config):
     mem      = slurm_config.get('config', 'memory')
     envcmd   = slurm_config.get('config', 'environment_command')
     # there will be try statements here
-    jobname  = slurm_config.get('config', 'jobname')
-    logfile  = slurm_config.get('config', 'logfile')
-    errfile  = slurm_config.get('config', 'errorfile')
+    try:
+        jobname  = slurm_config.get('config', 'jobname')
+    except configparser.NoOptionError:
+        jobname  = "{}_job".format(prefix)
+    try:
+        logfile  = slurm_config.get('config', 'logfile')
+    except configparser.NoOptionError:
+        logfile  = "{}_log".format(prefix)
+    try:
+        errfile  = slurm_config.get('config', 'errorfile')
+    except configparser.NoOptionError:
+        errfile  = "{}_err".format(prefix)
 
-    for ijob in range(num_jobs):
-        cmd = "{}; srun ".format(envcmd) + \
-            "--export=ALL " + \
-            "--mem={} ".format(mem) + \
-            "--time={} ".format(walltime) + \
-            "--job-name={} ".format(jobname) + \
-            "--error={} ".format(errfile) + \
-            "--output={} ".format(logfile) + \
-            "--partition={} ".format(partition) + \
-            "KITCAT_combinatorial -p {}".format(prefix) + \
-            "-i {} ".format(ijob) + \
-            "-n {} ".format(num_jobs) + \
-            "-p {}".format(prefix)
-        print(cmd)
-        #os.system(cmd)
+    sbatch_cmd = "#!/bin/bash \n" + \
+        "\n" + \
+        "#SBATCH --export=ALL \n" + \
+        "#SBATCH --mem={} \n".format(mem) + \
+        "#SBATCH --time={} \n".format(walltime) + \
+        "#SBATCH --job-name={} \n".format(jobname) + \
+        "#SBATCH --error={} \n".format(errfile) + \
+        "#SBATCH --output={} \n".format(logfile) + \
+        "#SBATCH --partition={} \n".format(partition) + \
+        "#SBATCH --array=0-{} \n".format(num_jobs-1) + \
+        "\n"
+    exec_cmd = "{} \n".format(envcmd) + \
+        "srun KITCAT_combinatorial -p {} ".format(prefix) + \
+        "-i ${SLURM_ARRAY_TASK_ID} " + \
+        "-n {} ".format(num_jobs) + \
+        "-p {}".format(prefix)
+
+    if tempdir == None:
+        tempdir = '/scratch/{}/scripts'.format(user)
+
+    filename = "{}/{}.sh".format(tempdir, jobname)
+    fid = open(filename, "w")
+    fid.write("{}{}".format(sbatch_cmd, exec_cmd))
+    fid.close()
+
+    print("$(sbatch --parsable {})".format(filename))
+    return #os.system("$(sbatch --parsable {})".format(filename))
 
 if __name__ == "__main__":
 
@@ -57,10 +78,12 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--prefix', required=True, type=str, help='prefix to be used to read the preprocessed file and also to generate the output')
     parser.add_argument('-n', '--number_of_jobs', required=True, type=int, help='number of jobs to be submitted to slurm')
     parser.add_argument('-c', '--config', required=True, type=str, help='configuration file for the slurm jobs.')
-    
+    parser.add_argument('-t', '--temp_directory', required=False, type=str, default=None, help='temporary directory name that will be used to place the' \
+                        'batch scripts')
     parsed_args = parser.parse_args()
     prefix      = parsed_args.prefix
     num_jobs    = parsed_args.number_of_jobs
     config      = parsed_args.config
-    
-    run(num_jobs, prefix, config)
+    tempdir     = parsed_args.temp_directory
+
+    jobid = run(num_jobs, prefix, config, tempdir)
