@@ -19,7 +19,7 @@ import configparser
 
 import numpy
 
-def run(num_jobs, prefix, config, tempdir):
+def run(num_jobs, prefix, config, tempdir, executable='combinatorial', dependency=None):
 
     slurm_config = configparser.RawConfigParser()
     slurm_config.read(config)
@@ -45,29 +45,40 @@ def run(num_jobs, prefix, config, tempdir):
     sbatch_cmd = "#!/bin/bash \n" + \
         "\n" + \
         "#SBATCH --export=ALL \n" + \
-        "#SBATCH --mem={} \n".format(mem) + \
+        "#SBATCH --mem={} \n".format(mem) + \ # this may need to some touchups later when testing. combine step requires more memory
         "#SBATCH --time={} \n".format(walltime) + \
-        "#SBATCH --job-name={} \n".format(jobname) + \
-        "#SBATCH --error={} \n".format(errfile) + \
-        "#SBATCH --output={} \n".format(logfile) + \
-        "#SBATCH --partition={} \n".format(partition) + \
-        "#SBATCH --array=0-{} \n".format(num_jobs-1) + \
-        "\n"
-    exec_cmd = "{} \n".format(envcmd) + \
-        "srun KITCAT_combinatorial -p {} ".format(prefix) + \
-        "-i ${SLURM_ARRAY_TASK_ID} " + \
-        "-n {} ".format(num_jobs) + \
-        "-p {}".format(prefix)
+        "#SBATCH --job-name={}_{} \n".format(jobname, executable) + \
+        "#SBATCH --error={}_{} \n".format(errfile, executable) + \
+        "#SBATCH --output={}_{} \n".format(logfile, executable) + \
+        "#SBATCH --partition={} \n".format(partition)
 
+    if executable == 'combinatorial':
+        sbatch_cmd += "#SBATCH --array=0-{} \n".format(num_jobs-1)
+
+    sbatch_cmd +=  "\n"
+
+    if executable == 'combinatorial':
+        exec_cmd = "{} \n".format(envcmd) + \
+            "srun KITCAT_combinatorial -p {} ".format(prefix) + \
+            "-i ${SLURM_ARRAY_TASK_ID} " + \
+            "-n {} ".format(num_jobs)
+    else:
+        exec_cmd = "{} \n".format(envcmd) + \
+            "srun KITCAT_combine -p {} ".format(prefix)
+        
     if tempdir == None:
         tempdir = '/scratch/{}/scripts'.format(user)
 
-    filename = "{}/{}.sh".format(tempdir, jobname)
+    filename = "{}/{}_{}.sh".format(tempdir, jobname, executable)
     fid = open(filename, "w")
     fid.write("{}{}".format(sbatch_cmd, exec_cmd))
     fid.close()
 
-    return os.system("$(sbatch --parsable {})".format(filename))
+    extra_arg = ""
+    if executable != "combinatorial":
+        extra_arg = "--dependency=afterok:{}".format(dependency)
+        
+    return os.system("$(sbatch --parsable {} {})".format(extra_arg, filename))
 
 if __name__ == "__main__":
 
@@ -84,4 +95,5 @@ if __name__ == "__main__":
     config      = parsed_args.config
     tempdir     = parsed_args.temp_directory
 
-    jobid = run(num_jobs, prefix, config, tempdir)
+    combinatorial_jobid = run(num_jobs, prefix, config, tempdir)
+    combine_jobid       = run(num_jobs, prefix, config, tempdir, executable='combine', dependency=combinatorial_jobid)
