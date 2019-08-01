@@ -29,7 +29,6 @@ def run(num_jobs, prefix, config, tempdir):
     walltime = slurm_config.get('config', 'walltime')
     mem      = slurm_config.get('config', 'memory')
     envcmd   = slurm_config.get('config', 'environment_command')
-    # there will be try statements here
     try:
         jobname  = slurm_config.get('config', 'jobname')
     except configparser.NoOptionError:
@@ -68,8 +67,7 @@ def run(num_jobs, prefix, config, tempdir):
     fid.write("{}{}".format(sbatch_cmd, exec_cmd))
     fid.close()
 
-    print("$(sbatch --parsable {})".format(filename))
-    return #os.system("$(sbatch --parsable {})".format(filename))
+    return os.system("$(sbatch --parsable {})".format(filename))
 
 if __name__ == "__main__":
 
