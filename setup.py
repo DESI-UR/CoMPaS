@@ -16,17 +16,6 @@ import sys
 from distutils.command.sdist import sdist as DistutilsSdist
 from setuptools import setup, find_packages
 from setuptools.command.install import install as InstallCommand
-#from py.paramock import versioning as ver
-
-class Install(InstallCommand):
-    """ Customized setuptools install command which uses pip."""
-    def run(self, *args, **kwargs):
-        try:
-            from pip._internal import main
-        except ImportError:
-            from pip import main
-        main(['install', '.'])
-        InstallCommand.run(self, *args, **kwargs)
 
 #
 # Begin setup
@@ -39,18 +28,10 @@ setup_keywords['name'] = 'CoMPaS'
 setup_keywords['description'] = 'Cosmological Multi-PArameter Scan'
 setup_keywords['author'] = 'Tolga Yapici'
 setup_keywords['author_email'] = 'tyapici@ur.rochester.edu'
-setup_keywords['license'] = 'BSD'
-setup_keywords['url'] = ''#https://github.com/DESI-UR/catalog_generation'
-#setup_keywords['version'] = ver.get_version(out_type='string')
+setup_keywords['license'] = 'MIT'
+setup_keywords['url'] = ''
+setup_keywords['version'] = "0.0.1"
 
-#print("Version is set to {}".format(ver.get_version(out_type='string')))
-
-#
-# END OF SETTINGS THAT NEED TO BE CHANGED.
-#
-
-# Set other keywords for the setup function.  These are automated, & should
-# be left alone unless you are an expert.
 #
 # Treat everything in bin/ except *.rst as a script to be installed.
 #
@@ -59,21 +40,19 @@ if os.path.isdir('bin'):
         if not os.path.basename(fname).endswith('.rst')]
 
 setup_keywords['provides'] = [setup_keywords['name']]
-setup_keywords['setup_requires'] = ['numpy>=1.13.1']
-setup_keywords['dependency_links'] = ['git+https://github.com/DESI-UR/KITCAT.git#egg=KITKAT-2.0']
-setup_keywords['install_requires'] = ['numpy>=1.13.1', 'healpy>=1.11.0', 'numpy>=1.13.1',
+setup_keywords['dependency_links'] = ['git+https://github.com/DESI-UR/KITCAT.git@2.0.0#egg=KITCAT-2.0.0']
+setup_keywords['install_requires'] = ['healpy>=1.11.0', 'numpy>=1.13.1',
                                       'configparser>=3.5', 'astropy>=1.2.1', 'scipy>=0.19.1',
                                       'matplotlib>=2.0.0', 'emcee>=2.2.1', 'scikit-learn>=0.18.1',
-                                      'KITCAT>=0.0']
+                                      'KITCAT']
 setup_keywords['zip_safe'] = False
 setup_keywords['use_2to3'] = False
-setup_keywords['packages'] = find_packages('py')
 setup_keywords['package_dir'] = {'':'py'}
-setup_keywords['cmdclass'] = {'install': Install,}
+setup_keywords['packages'] = find_packages('py')
 
 # Add internal data directories.
 #
-#setup_keywords['package_data'] = {'ParaMock': ['data/*',]}
+setup_keywords['package_data'] = {'CoMPaS': ['data/*',]}
 
 # Run setup command.
 #
