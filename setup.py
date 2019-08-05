@@ -10,31 +10,22 @@ import glob
 import os
 import sys
 
-#
-# setuptools' sdist command ignores MANIFEST.in
-#
 from distutils.command.sdist import sdist as DistutilsSdist
 from setuptools import setup, find_packages
 from setuptools.command.install import install as InstallCommand
+from py.compas import versioning as ver
 
-#
 # Begin setup
-#
 setup_keywords = dict()
-#
-# THESE SETTINGS NEED TO BE CHANGED FOR EVERY PRODUCT.
-#
-setup_keywords['name'] = 'CoMPaS'
+setup_keywords['name'] = 'compas'
 setup_keywords['description'] = 'Cosmological Multi-PArameter Scan'
 setup_keywords['author'] = 'Tolga Yapici'
 setup_keywords['author_email'] = 'tyapici@ur.rochester.edu'
 setup_keywords['license'] = 'MIT'
 setup_keywords['url'] = ''
-setup_keywords['version'] = "0.0.1"
+setup_keywords['version'] = ver.get_version(out_type='string')
 
-#
 # Treat everything in bin/ except *.rst as a script to be installed.
-#
 if os.path.isdir('bin'):
     setup_keywords['scripts'] = [fname for fname in glob.glob(os.path.join('bin', '*'))
         if not os.path.basename(fname).endswith('.rst')]
@@ -51,9 +42,10 @@ setup_keywords['package_dir'] = {'':'py'}
 setup_keywords['packages'] = find_packages('py')
 
 # Add internal data directories.
-#
-setup_keywords['package_data'] = {'CoMPaS': ['data/*',]}
+setup_keywords['data_files'] = [ ('data/configs/', ['data/configs/example.ini', 'data/configs/slurm_config.ini']) ]
+setup_keywords['include_package_data'] = True
 
 # Run setup command.
-#
 setup(**setup_keywords)
+
+print(find_packages('py'))
