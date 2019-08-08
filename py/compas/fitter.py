@@ -27,6 +27,13 @@ class fitter:
         self._prefix      = prefix
                     
     def evaluate(self):
+        running = False
+        output = os.system("$(squeue -u {} | grep {})".format(self._user, self._jobid))
+        while len(output) > 1: # this needs to be checked on the cluster. not sure
+            # script is still running.
+            # wait till it is complete
+            running = True
+            output = os.system("$(squeue -u {} | grep {})".format(self._user, self._jobid))
         value = self._function(self._output)
         return value
     
@@ -40,12 +47,12 @@ class fitter:
         # the configuration for the slurm job is read
         slurm_config = configparser.RawConfigParser()
         slurm_config.read(self._slurm_config)
-        user     = slurm_config.get('config', 'user')
-        partition= slurm_config.get('config', 'partition')
-        walltime = slurm_config.get('config', 'walltime')
-        mem      = slurm_config.get('config', 'memory')
-        envcmd   = slurm_config.get('config', 'environment_command')
-        jobname  = "integration"
+        self._user     = slurm_config.get('config', 'user')
+        self._partition= slurm_config.get('config', 'partition')
+        self._walltime = slurm_config.get('config', 'walltime')
+        self._mem      = slurm_config.get('config', 'memory')
+        self._envcmd   = slurm_config.get('config', 'environment_command')
+        self._jobname  = "integration"
         try:
             logfile  = slurm_config.get('config', 'logfile')
         except configparser.NoOptionError:
@@ -59,45 +66,45 @@ class fitter:
         # do exist. if not, they are created. in actuality, the script attempts to create
         # them, and if it fails it means they exist.
         try:
-            os.mkdir("/scratch/{}/tmp".format(user))
+            os.mkdir("/scratch/{}/tmp".format(self._user))
         except:
             continue
         try:
-            os.mkdir("/scratch/{}/tmp/scripts".format(user))
+            os.mkdir("/scratch/{}/tmp/scripts".format(self._user))
         except:
             continue
         try:
-            os.mkdir("/scratch/{}/tmp/results".format(user))
+            os.mkdir("/scratch/{}/tmp/results".format(self._user))
         except:
             continue
         
-        self._output = "/scratch/{}/tmp/output_{}".format(user, random.getrandbits(64))
+        self._output = "/scratch/{}/tmp/output_{}".format(self._user, random.getrandbits(64))
 
         # the command line to execute for the slurm job is constructed here.
         sbatch_cmd = "#!/bin/bash \n" + \
             "\n" + \
             "#SBATCH --export=ALL \n" + \
-            "#SBATCH --mem={} \n".format(mem) + \
-            "#SBATCH --time={} \n".format(walltime) + \
-            "#SBATCH --job-name={}_{} \n".format(jobname, executable) + \
-            "#SBATCH --error={}_{} \n".format(errfile, executable) + \
-            "#SBATCH --output={}_{} \n".format(logfile, executable) + \
-            "#SBATCH --partition={} \n".format(partition)
+            "#SBATCH --mem={} \n".format(self._mem) + \
+            "#SBATCH --time={} \n".format(self._walltime) + \
+            "#SBATCH --job-name={} \n".format(self._jobname) + \
+            "#SBATCH --error={} \n".format(errfile) + \
+            "#SBATCH --output={} \n".format(logfile) + \
+            "#SBATCH --partition={} \n".format(self._partition)
         sbatch_cmd +=  "\n"
 
         # the execution line is constructed here. the user must have provided an environment call
         # in the configuration file.
-        exec_cmd = "{} \n".format(envcmd) + \
+        exec_cmd = "{} \n".format(self._envcmd) + \
             "srun KITCAT_integrate -p {} ".format(self._prefix) + \
             "-o {}".format(self._output)
             "-c {} ".format(self._cosmo_config)
 
         # the scripts are stored in the temporary directory in user's scratch area
         if tempdir == None:
-            tempdir = '/scratch/{}/tmp/scripts'.format(user)
+            tempdir = '/scratch/{}/tmp/scripts'.format(self._user)
 
         # the complete batch job script is written here.
-        filename = "{}/{}_{}.sh".format(tempdir, jobname, executable)
+        filename = "{}/{}.sh".format(tempdir, self._jobname)
         fid = open(filename, "w")
         fid.write("{}{}".format(sbatch_cmd, exec_cmd))
         fid.close()
@@ -106,10 +113,10 @@ class fitter:
         # in any case, it is defined empty.
         extra_arg = ""
 
-        # the return value for this method is the job id on the computer cluster
+        # this method stores the job id on the computer cluster
         # this will be later used for holding the fitter methid.
-        return os.system("$(sbatch --parsable {} {})".format(extra_arg, filename))
-
+        self._jobid = os.system("$(sbatch --parsable {} {})".format(extra_arg, filename))
+        
     def set_slurm_config(self, config):
         self._slurm_config = config
     
