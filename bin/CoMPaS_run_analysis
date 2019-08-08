@@ -1,0 +1,52 @@
+#!/bin/python
+
+########################################################################
+#                                                                      #
+# DISCLAIMER: This script encapsulates the project KITCAT and          #
+#             generates the histograms to calculate 2-point            #
+#             correlation function for the provided catalog.           #
+#             User can use KITCAT as well.                             #
+#                                                                      #
+########################################################################
+
+import sys
+
+import os
+
+import argparse
+
+import configparser
+
+import numpy
+
+import compas.fitter as fitter
+
+def run():
+    return None
+    
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description=r'Script to run the combinatorial stage of KITCAT for 2-point correlation function calculations. ' \
+                                     'DISCLAIMER: This script encapsulates the project KITCAT and prepares the catalogs. User can use KITCAT as well.')
+    parser.add_argument('-p', '--prefix', required=True,  type=str, help='prefix to be used to read the preprocessed file and also to generate the output')
+    parser.add_argument('-c', '--config', required=True,  type=str, help='configuration file for the slurm jobs.')
+    parser.add_argument('-o', '--output', required=False, type=str, default=None, help='temporary output name')
+    parser.add_argument('-s', '--setup',                  type=str, help='a setup file for the cosmological parameter scan.' \
+                        'If not defined, the setup provided with the package will be used.',
+                        default="{}/data/configs/setup.ini".format(sys.prefix))
+
+    parsed_args = parser.parse_args()
+
+    prefix      = parsed_args.prefix
+    config      = parsed_args.config
+    output      = parsed_args.output
+    setup       = parsed_args.setup
+
+    setup_parser = configparser.RawConfigParser()
+    setup_parser.read(setup)
+    
+    h0s      = numpy.asarray((setup_parser.get('config', 'h0')).split())
+    omegam0s = numpy.asarray((setup_parser.get('config', 'omegam0').split()))
+
+    num_trials = len(h0s) * len(omegam0s)
+    
