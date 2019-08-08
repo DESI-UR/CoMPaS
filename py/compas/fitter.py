@@ -26,8 +26,8 @@ class fitter:
         self._slurm_config= ""
         self._prefix      = prefix
                     
-    def evaluate(self, var):
-        value = self._function(var)
+    def evaluate(self):
+        value = self._function(self._output)
         return value
     
     def run_integration(self, config=None):
